@@ -1,0 +1,71 @@
+{
+  "Centralized_Baseline": [
+    {
+      "run_name": "baseline_1000_samples",
+      "run_id": "4e59bb12bfde4998bf9828cc15abccc2",
+      "parameters": {
+        "model": "bert-base-uncased",
+        "train_size": "1000",
+        "epochs": "2",
+        "batch_size": "16",
+        "learning_rate": "2e-05",
+        "warmup_steps": "50",
+        "dataset": "ag_news",
+        "num_labels": "4"
+      },
+      "metrics": {
+        "final_accuracy": 0.8433,
+        "final_eval_loss": 0.508,
+        "train_loss": 0.8317,
+        "train_runtime": 2857.2702,
+        "samples_per_second": 0.7,
+        "train_loss_step": 0.4406,
+        "epoch_accuracy": 0.8433,
+        "epoch_eval_loss": 0.508
+      },
+      "tags": {
+        "model_type": "BERT",
+        "task": "text_classification",
+        "developer": "Tsegai Yhdego"
+      }
+    }
+  ],
+  "Federated_NonIID": [
+    {
+      "run_name": "federated_3sites_noniid",
+      "run_id": "e70042d891a7463698dfc1fb298c6bf8",
+      "parameters": {
+        "num_sites": "3",
+        "data_distribution": "Non-IID",
+        "site_a_classes": "World only",
+        "site_b_classes": "Sports + Business",
+        "site_c_classes": "Sci/Tech only",
+        "site_a_samples": "800",
+        "site_b_samples": "800",
+        "site_c_samples": "800",
+        "global_test_samples": "600",
+        "fedavg_rounds": "1",
+        "local_epochs": "2",
+        "model": "bert-base-uncased"
+      },
+      "metrics": {
+        "site_a_accuracy": 0.25,
+        "site_b_accuracy": 0.4933,
+        "site_c_accuracy": 0.25,
+        "global_federated_accuracy": 0.3333,
+        "global_World_accuracy": 0.0133,
+        "global_Sports_accuracy": 0.28,
+        "global_Business_accuracy": 0.06,
+        "global_Sci/Tech_accuracy": 0.98,
+        "improvement_over_best_local": -0.16
+      },
+      "tags": {
+        "experiment_type": "Federated Learning",
+        "distribution": "Non-IID",
+        "algorithm": "FedAvg",
+        "developer": "Tsegai Yhdego",
+        "relevance": "PhD dissertation research"
+      }
+    }
+  ]
+}

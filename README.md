@@ -1,76 +1,58 @@
-#MLflow
-# Federated Learning Experiment Report
-## Non-IID Multi-Site BERT Text Classification
+# Day 5 — MLflow Experiment Tracking + Federated Learning
 
-**Author:** Tsegai Yhdego, PhD  
-**Institution:** R-SEAT Center, FAMU-FSU  
-**Date:** October 2026  
-**Framework:** PyTorch, HuggingFace Transformers, MLflow  
+**AI Skills Bootcamp | Tsegai Yhdego, PhD**
 
----
-
-## Experiment Overview
-
-This experiment simulates a federated learning setup across three geographically 
-distributed sites with Non-IID (non-independent and identically distributed) data. 
-The setup directly mirrors real-world federated learning challenges studied in 
-Tsegai's PhD dissertation on attribute-based cognitive ML for manufacturing quality 
-control.
+[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
+[![MLflow](https://img.shields.io/badge/MLflow-2.16-blue)](https://mlflow.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.4-orange)](https://pytorch.org)
+[![FedAvg](https://img.shields.io/badge/Algorithm-FedAvg-green)](https://github.com/Tsegai20)
 
 ---
 
-## Dataset
+## What I Built
 
-**AG News** — 120,000 news articles across 4 categories:
-- 0: World news
-- 1: Sports news  
-- 2: Business news
-- 3: Sci/Tech news
+Two experiments combining MLflow experiment tracking with federated learning simulation — directly mirroring the Non-IID federated learning challenges studied in my PhD dissertation on attribute-based cognitive ML for manufacturing quality control.
 
 ---
 
-## Non-IID Data Distribution
+## Experiment 1 — Centralized BERT Baseline
+
+Standard fine-tuning on 1000 balanced samples from all 4 classes.
+
+| Metric | Value |
+|--------|-------|
+| Epoch 1 accuracy | 77.7% |
+| Epoch 2 accuracy | **84.3%** |
+| Final eval loss | 0.508 |
+| Training time | ~47 minutes CPU |
+
+**Key finding:** Centralized training with balanced data achieves strong performance across all four classes. This is the upper bound target for federated learning to approach.
+
+---
+
+## Experiment 2 — Federated Learning (Non-IID, 3 Sites, 1 Round)
+
+### Data Distribution
 
 | Site | Classes | Samples | Description |
 |------|---------|---------|-------------|
 | Site A | World only | 800 | Extreme single-class skew |
 | Site B | Sports + Business | 800 (400 each) | Two-class distribution |
 | Site C | Sci/Tech only | 800 | Extreme single-class skew |
-| Global Test | All 4 classes | 600 (150 each) | Balanced evaluation set |
+| Global Test | All 4 classes | 600 (150 each) | Balanced evaluation |
 
-No site shares raw data with any other site. Only model weights are shared.
+No site shares raw data. Only model weights are shared via FedAvg.
 
----
-
-## Experiments Conducted
-
-### Experiment 1 — Baseline BERT (Centralized)
-Standard fine-tuning on 1000 mixed samples from all classes.
-
-**Results:**
-- Epoch 1 accuracy: 77.7%
-- Epoch 2 accuracy: 84.3%
-- Final eval loss: 0.508
-- Training time: ~47 minutes on CPU
-
-**Key finding:** Centralized training with balanced data achieves strong performance 
-across all four classes.
-
----
-
-### Experiment 2 — Federated Learning (Non-IID, 3 Sites, 1 Round)
-FedAvg aggregation after one round of local training at each site.
-
-**Local Model Results:**
+### Results
 
 | Model | Overall Accuracy | Key Observation |
 |-------|-----------------|-----------------|
 | Site A (World only) | 25.0% | Predicts everything as World |
-| Site B (Sports+Business) | 49.3% | Best local model — two classes |
+| Site B (Sports+Business) | 49.3% | Best local — two classes |
 | Site C (Sci/Tech only) | 25.0% | Predicts everything as Sci/Tech |
-| Global Federated Model | 33.3% | Dominated by Sci/Tech class |
+| **Global FedAvg** | **33.3%** | Dominated by Sci/Tech class |
 
-**Global Model Classification Report:**
+### Global Model Classification Report
 
 | Class | Precision | Recall | F1 |
 |-------|-----------|--------|-----|
@@ -82,86 +64,165 @@ FedAvg aggregation after one round of local training at each site.
 
 ---
 
-## Key Findings and Analysis
+## Experiment 3 — Multi-Round FedAvg (5 Rounds, 4 Sites)
+
+Running multiple rounds dramatically reduces client drift.
+
+| Round | Global Accuracy | Improvement |
+|-------|----------------|-------------|
+| 1 | 39.8% | +39.8% |
+| 2 | 50.5% | +10.7% |
+| 3 | 58.2% | +7.7% |
+| 4 | 63.7% | +5.5% |
+| 5 | **66.7%** | +3.0% |
+
+**Convergence pattern:** Rapid initial improvement then diminishing returns — exactly what FL theory predicts.
+
+**Non-IID gap vs centralized:** 84.3% - 66.7% = **17.6 percentage points**
+
+---
+
+## Key Findings
 
 ### Finding 1 — Non-IID data causes client drift
-Each local model converged toward its own data distribution:
-- Site A predicted almost all samples as World
-- Site C predicted almost all samples as Sci/Tech
-- Site B performed best locally because it had two classes
+Each local model converges toward its own data distribution. Site A predicts everything as World. Site C predicts everything as Sci/Tech. This is the fundamental challenge of federated learning under extreme Non-IID conditions.
 
-### Finding 2 — Single round FedAvg fails under extreme Non-IID
-The global model was dominated by Sci/Tech predictions because:
-- Site C had the strongest single-class signal (800 pure Sci/Tech samples)
-- FedAvg equal weighting did not account for class imbalance across sites
-- One round of local training caused severe client drift before aggregation
+### Finding 2 — Single-round FedAvg fails under extreme Non-IID
+The global model was dominated by Sci/Tech predictions because Site C had the strongest single-class signal. FedAvg equal weighting did not account for class imbalance across sites.
 
-### Finding 3 — Sci/Tech dominated the federated average
-Confusion matrix shows 144/150 World, 108/150 Sports, 137/150 Business,
-and 147/150 Sci/Tech articles all predicted as Sci/Tech after aggregation.
+### Finding 3 — Multi-round FedAvg significantly reduces client drift
+Five rounds improved accuracy from 33.3% to 66.7% — a 33 percentage point improvement. The improvement follows a classic convergence curve with diminishing returns per round.
 
----
-
-## Why This Matters
-
-This experiment demonstrates the core challenge that Tsegai's PhD dissertation 
-addressed — traditional FedAvg breaks down under extreme Non-IID conditions, 
-which are common in real manufacturing settings where:
-- Different sites produce different product types
-- Local data distributions are highly skewed
-- Class coverage varies dramatically across sites
-
-The solution proposed in Tsegai's research — attribute-based cognitive ML with 
-transferable attribute learning — addresses this by enabling knowledge transfer 
-across sites at the semantic attribute level rather than raw weight averaging.
-
----
-
-## Known Limitations and Future Work
-
-1. **Single aggregation round** — Multiple rounds with smaller local epochs 
-   (FedProx or multi-round FedAvg) would reduce client drift significantly
-
-2. **Equal weighting** — Class-balanced weighting in FedAvg would reduce 
-   Sci/Tech dominance
-
-3. **No differential privacy** — Adding DP noise to weight updates would 
-   demonstrate privacy-preserving federated learning
-
-4. **FedProx** — Adding proximal term to local training objective prevents 
-   local models from drifting too far from global model
+### Finding 4 — This directly mirrors my PhD research
+Traditional FedAvg breaks down under extreme Non-IID conditions, which are common in manufacturing where different sites produce different product types. My dissertation addresses this with attribute-based cognitive ML enabling knowledge transfer at the semantic attribute level rather than raw weight averaging.
 
 ---
 
 ## MLflow Experiment Tracking
 
-All experiments tracked in MLflow with:
+All experiments tracked with full reproducibility:
+
+```python
+with mlflow.start_run(run_name="federated_3sites_noniid"):
+    mlflow.log_params({
+        "num_sites": 3,
+        "data_distribution": "Non-IID",
+        "algorithm": "FedAvg",
+        "model": "bert-base-uncased"
+    })
+    mlflow.log_metrics({
+        "global_accuracy": global_accuracy,
+        "improvement": improvement
+    })
+    mlflow.log_artifact("confusion_matrix.png")
+    mlflow.log_artifact("classification_report.txt")
+```
+
+**Tracked per experiment:**
 - Parameters: model, data distribution, site assignments, sample counts
-- Metrics: per-site accuracy, global accuracy, per-class accuracy
-- Artifacts: confusion matrices, classification reports
+- Metrics: per-site accuracy, global accuracy, per-class accuracy per round
+- Artifacts: confusion matrices, classification reports, convergence plots
 - Tags: experiment type, algorithm, developer, research relevance
 
-**Experiment 1 Run ID:** 4e59bb12bfde4998bf9828cc15abccc2  
-**Experiment 2 Run ID:** e70042d891a7463698dfc1fb298c6bf8  
+---
+
+## FedAvg Implementation
+
+```python
+def fedavg(model_states, weights=None):
+    if weights is None:
+        weights = [1.0 / len(model_states)] * len(model_states)
+    
+    averaged = {}
+    for key in model_states[0].keys():
+        averaged[key] = sum(
+            w * state[key].float()
+            for w, state in zip(weights, model_states)
+        )
+    return averaged
+```
+
+---
+
+## Future Work
+
+| Improvement | Expected Impact |
+|-------------|----------------|
+| FedProx — proximal term in local objective | Reduces client drift |
+| Class-balanced FedAvg weighting | Reduces Sci/Tech dominance |
+| Differential privacy noise | Privacy-preserving FL |
+| More federated rounds | Continued convergence |
+| Attribute-based aggregation | PhD dissertation approach |
+
+---
+
+## Project Structure
+
+day5/
+├── federated_learning_report.md # This document
+├── experiment_summary.json # All run IDs and metrics
+├── federated_convergence.png # 5-round convergence chart
+├── mlflow.db # MLflow SQLite tracking
+└── README.md
+
 
 ---
 
 ## Technical Stack
 
 - **Model:** BERT base uncased (bert-base-uncased)
-- **Framework:** HuggingFace Transformers, PyTorch
-- **Aggregation:** FedAvg (Federated Averaging)
+- **Framework:** HuggingFace Transformers · PyTorch
+- **Aggregation:** FedAvg implemented from scratch
 - **Tracking:** MLflow with SQLite backend
 - **Evaluation:** Scikit-learn classification report
-- **Visualization:** Matplotlib, Seaborn
+- **Visualization:** Matplotlib · Seaborn
 
 ---
 
-## Conclusion
+## Skills Added to Resume
 
-This experiment successfully demonstrates both the power and limitations of 
-federated learning under Non-IID conditions. The centralized baseline achieved 
-84.3% accuracy with balanced data, while the federated approach with extreme 
-Non-IID distribution and single-round FedAvg achieved only 33.3% — highlighting 
-the client drift problem that motivates more advanced federated learning algorithms 
-and attribute-based approaches developed in Tsegai's PhD research.
+- MLflow experiment tracking — parameters, metrics, artifacts, tags
+- FedAvg implementation from scratch
+- Non-IID federated learning simulation
+- Client drift diagnosis and analysis
+- Multi-round convergence measurement
+- Confusion matrix analysis for model bias detection
+- Reproducible ML experiment design
+
+---
+
+## Part of AI Skills Bootcamp
+
+| Day | Project | Repo |
+|-----|---------|------|
+| 1 | Streamlit AI Apps | [Day 1](https://github.com/Tsegai20/ai-skills-bootcamp) |
+| 2 | Fine-Tuned BERT Classifier | [Day 2](https://github.com/Tsegai20/ai-skills-bootcamp) |
+| 3 | FastAPI ML Serving | [Day 3](https://github.com/Tsegai20/ai-skills-bootcamp) |
+| 4 | RAG Pipeline | [Day 4](https://github.com/Tsegai20/ai-skills-bootcamp) |
+| **5** | **MLflow + Federated Learning** | **You are here** |
+| 6 | Docker Federated System | [ai-skills-bootcamp6](https://github.com/Tsegai20/ai-skills-bootcamp6) |
+
+---
+
+## Research Connection
+
+This experiment directly mirrors challenges studied in my PhD dissertation on **attribute-based cognitive ML for manufacturing quality control**:
+
+- Non-IID data → different manufacturing sites produce different product types
+- Privacy preservation → raw production data never leaves each site
+- Client drift → local models bias toward local data distribution
+- Multi-round convergence → iterative aggregation reduces drift
+- 17.6% gap → motivates advanced FL algorithms including attribute-based learning
+
+**Published:** IEEE T-ASE 2025 · ASME JCISE 2024  
+**Patent filed:** Privacy-preserving federated learning system
+
+---
+
+## Author
+
+**Tsegai Yhdego, PhD**  
+Industrial Engineering — Machine Learning and Optimization  
+Assistant Director, R-SEAT Center, FAMU-FSU  
+USDOT-Funded Research — Intelligent Transportation and Autonomous Systems  
+[GitHub](https://github.com/Tsegai20) · [LinkedIn](https://www.linkedin.com/in/tsegai-yhdego-ph-d-b6209b118/)
